@@ -1,28 +1,40 @@
 package br.com.minisaas.controller;
 
 import javax.ejb.Stateless;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
+import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import br.com.minisaas.model.Tarefa;
+import java.util.List;
 
-import br.com.minisaas.model.TarefaDTO;
-
-@Stateless // Diz ao WildFly que isso é um EJB(enterprise javabean)
+@Stateless
 @Path("/tarefas")
-@Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
 public class TarefaController {
 
+    @PersistenceContext(unitName = "MinisaasPU") // Conecta com o que configuramos no persistence.xml
+    private EntityManager em;
+    
+    @GET
+    public List<Tarefa> listar() {
+    	return em.creatyQuery("SELECT t FROM Tarefa t", Tarefa.class).getResultLiss();
+    }
+    
     @POST
-    public Response salvarNovaTarefa(TarefaDTO tarefa) {
-        System.out.println("=== CHEGOU REQUISIÇÃO DO ANGULAR! ===");
-        System.out.println("Título: " + tarefa.getTitulo());
-        System.out.println("Descrição: " + tarefa.getDescricao());
-        
-        // Devolve o status 201
-        return Response.status(Response.Status.CREATED).entity(tarefa).build();
+    public Response salvar(Tarefa tarefa) {
+        try {
+            // O comando mágico que transforma o objeto Java em uma linha no SQL
+            em.persist(tarefa); 
+            
+            System.out.println("=== TAREFA SALVA NO POSTGRES: " + tarefa.getTitulo());
+            
+            return Response.status(Response.Status.CREATED).entity(tarefa).build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+        }
     }
 }
